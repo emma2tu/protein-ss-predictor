@@ -1,0 +1,207 @@
+==============================
+ CM121 PROJECT PSEUDOCODE FLOW
+==============================
+
+@main.py
+---------
+High-level controller script. Does NOT need to import pipeline.py.
+
+Functions:
+  - process_all_files(): Load and structure raw files
+  - train_pipeline(): Train the classifier using training data
+  - validate_pipeline(): Run predictions on validation set and evaluate performance
+  - make_predictions(): Run final predictions on test set
+
+
+#1 — Load and Structure Input Data
+==================================
+
+@ProteinDataProcessor.py
+-------------------------
+Processes raw input files into structured dictionaries used throughout the project.
+
+Processing Raw Files:
+  - process_train_tsv()
+      • Input: train.tsv
+      • Output: 
+          - train_df (pandas DataFrame)
+          - train_tsv_dict: { protein_name → list of secondary structure labels }
+      • Notes: Pads the label list to match residue indices.
+
+  - process_test_tsv()
+      • Input: test.tsv
+      • Output: 
+          - test_df (pandas DataFrame)
+          - test_tsv_dict: { protein_name → list of residue IDs }
+
+  - process_sequences_fasta()
+      • Input: sequences.fasta
+      • Output: 
+          - raw_sequences_dict: { protein_name → full amino acid sequence (string) }
+
+Filtering:
+  - filter_training_sequences()
+      • Keeps proteins where sequence length ≥ label length (from train.tsv)
+
+  - filter_testing_sequences()
+      • Keeps proteins that are present in test_tsv_dict
+
+  - make_training_validation_sets()
+      • Splits training_sequences_dict into training_set and validation_set (every 5th protein goes to validation)
+
+  - make_testing_set()
+      • Filters valid test sequences and stores in testing_set
+
+Structured Data:
+  - train_tsv_dict            → { protein → list of secondary structures }
+  - test_tsv_dict             → { protein → list of residue IDs }
+  - raw_sequences_dict        → { protein → sequence string }
+  - training_sequences_dict   → { protein → sequence string (filtered) }
+  - testing_sequences_dict    → { protein → sequence string (filtered) }
+  - training_set              → { protein → (sequence, structure list) }
+  - validation_set            → { protein → (sequence, structure list) }
+  - testing_set               → { protein → sequence string }
+
+Note:
+** If a sequence in the FASTA file is shorter than the final residue index in train/test.tsv,
+   it must be filtered out — otherwise the prediction tensor won't align. 
+   In postprocessing, fill in placeholder `.` for residues with no prediction (i.e. out of bounds).
+
+
+#2 — Train the Classifier and Predict
+=====================================
+
+@ProteinPredictionPipeline.py
+------------------------------
+Pipeline utilities for feature extraction, classification, and postprocessing.
+
+(1) Embedding:
+  - tokenize_and_embed(sequence)
+      • Input: raw amino acid sequence (string)
+      • Output: embedding tensor from ESM (logits)
+
+(3) Classification:
+  - predict_secondary_structure(sequence)
+      • Input: raw amino acid sequence
+      • Output: list of predicted secondary structure labels (per residue)
+
+(4) Postprocessing:
+  - align_predictions_to_ids()
+      • Ensures output aligns with expected residue IDs
+      • Adds '.' placeholders for missing positions or padding
+
+
+@trainer.py
+-----------
+(2) Training the Classifier:
+  - generate_logits()
+      • Input: dictionary { protein → sequence }
+      • Output: dictionary { protein → embedding tensor }
+
+  - train_classifier()
+      • Uses ESM embeddings + secondary structure labels to train a Random Forest classifier
+
+
+#3 — Validate Performance
+==========================
+
+@validator.py
+-------------
+Runs predictions on validation set and evaluates accuracy.
+
+  - validate()
+      • Uses same pipeline as test predictions
+      • Compares predicted labels to true labels
+      • Outputs accuracy and possibly confusion matrix
+
+
+#4 — Generate Final Predictions on Test Set
+===========================================
+
+@feeder.py
+----------
+Runs the trained model on unseen test data and formats predictions for submission.
+
+  - run_test_pipeline()
+      • Uses trained model + ESM embeddings
+      • Outputs formatted CSV for Codabench upload
+
+
+
+@main.py
+ -  process_all_files()
+ -  train the pipeline()
+ -  validate the pipeline()
+ -  make predictions ()
+** does not need to import pipeline.py
+
+#1 Store all files into datastructures our program can work with
+@ProteinDataProcessor.py 
+Processing Raw Files:
+ -  process_train_tsv(): Processes train.tsv into a dictionary w/ protein names as keys and lists of secondary structures as values, 
+    where the index of each secondary structure corresponds to the position of the amino acid in the protein sequence.
+        - input = train.tsv
+        - train_df: a dataframe version of train.tsv
+        - train_tsv_dict: keys = protein names, values = sequences
+ -  process_test_tsv(): Processes train.tsv into a dictionary w/ protein names as keys and lists of secondary structures as values, 
+    where the index of each secondary structure cor
+        - input = test.tsv
+        - test_tsv_dict: keys = protein names, values = residue ID lists
+ -  process_sequences_fasta(): 
+Filtering:
+ -  filter_training_sequences():
+        - input = 
+        - return =  
+ -  filter_testing_sequences
+Data Structures:
+    - train_tsv_dict = proteins to secondary structures (raw tsv data padded)
+    - test_tsv_dict = proteins to residue IDs (raw tsv data)
+    - raw_sequences_dict = proteins to sequences (all)
+    - training_sequences_dict = 
+    - testing_sequences_dict = 
+
+** if the sequence in the fasta wasn't longer than the last residue in test.tsv, 
+the prediction tensor wont be long enough.
+in the postprocessing function, make sure to check for out of bounds, and put placeholders '.' for IDs w/o predictions
+
+#2 Set up and train the pipeline following the numbers (1)->(2)->(3)->(4)
+@ProteinPredictionPipeline.py
+(1) Preprocessing & Embedding (ESM):
+ -  tokenize_and_embed(): Takes in a protein sequence, tokenizes it, and converts it into a tensor of embeddings 
+        - input = sequence (one protein sequence)
+        - output = logits (the final embeddings of that protein sequence)
+(3) Classifier (Random Forest):
+ -  predict_secondary_structure(): Takes in a protein sequence string and returns a tensor of predicted secondary structures,
+    with one entry for each amino acid, whos index corresponds 
+(4) Postprocessing:
+ -  takes the 
+Data Structures:
+
+@trainer.py
+(2) Training the Classifier:
+ -  generate_logits(): from a dictionary of test protein names & sequences
+ -  train_classifier()
+
+#3 Validate that our program works feeder
+@validator.py
+- runs the program (makes predictions) on validation data set
+- checks the accuracy
+- uses feeder for step 1
+
+#4 Run the program on the test data
+@feeder.py
+- runs the program (makes predictions) on test data set
+
+
+
+
+
+
+TOKENIZE AND EMBED - Autotokenizer. AutoModel.from_pretrained(checkpoint), checkpoint = "esm..."
+- tokenizer: convert each input into a list of tokens
+- embedder: generate embeddings from tokens and extract last hidden state: logits (learned embeddings)
+PREDICT
+- from logits, apply softmax layer to normalize (sum to 1)
+- from normalized logits (aka best embeddings), make predictions/labels/outputs, use model.config.id2label
+FEED
+- feeds inputs into model
