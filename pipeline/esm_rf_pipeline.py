@@ -5,6 +5,7 @@ import torch
 import numpy as np
 import joblib
 import os
+from tqdm import tqdm
 from config import ESM_MODEL_NAME, CLASSIFIER_PATH
 
 class ESMRandomForestPipeline:
@@ -16,7 +17,7 @@ class ESMRandomForestPipeline:
         self.model = AutoModel.from_pretrained(model_name).to(self.device)
         self.model.eval()
 
-        self.classifier = RandomForestClassifier(n_estimators=100, random_state=42)
+        self.classifier = RandomForestClassifier(n_estimators=100, random_state=42, verbose=1, n_jobs=-1)
         self.classifier_path = classifier_path
 
         self.embedding_cache_dir = "cache/embeddings/"
@@ -57,8 +58,8 @@ class ESMRandomForestPipeline:
             - y: Corresponding structure labels
         """
         X, y = [], []
-        for protein, (seq, labels) in dataset_dict.items():
-            embeddings = self.embed_sequence(seq)
+        for i, (protein, (seq, labels)) in enumerate(tqdm(dataset_dict.items(), desc="Embedding training set")):
+            embeddings = self.embed_sequence(seq, protein_name=protein) 
             for i, emb in enumerate(embeddings):
                 if i < len(labels): #safety check
                     X.append(emb)
@@ -92,7 +93,7 @@ class ESMRandomForestPipeline:
     
     def save_classifier(self):
         os.makedirs(os.path.dirname(self.classifier_path), exist_ok=True)
-        joblib.dump(self.classifier, self.classifier)
+        joblib.dump(self.classifier, self.classifier_path)
 
     def load_classifier(self):
         if os.path.exists(self.classifier_path):
