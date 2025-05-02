@@ -1,6 +1,8 @@
 import config
 import pandas as pd
 from Bio import SeqIO
+import joblib
+import os
 
 class ProteinDataProcessor:
     def __init__(self):
@@ -14,6 +16,7 @@ class ProteinDataProcessor:
         self.training_set = {}
         self.validation_set = {}
         self.testing_set = {}
+        self.cache_path = "cache/processor.pkl"
 
     def __str__(self):
         summary = (
@@ -89,6 +92,13 @@ class ProteinDataProcessor:
         return self.testing_set
 
     def process_all(self, train_tsv=config.TRAIN_TSV, test_tsv=config.TEST_TSV, sequences_fasta=config.FASTA):
+        if os.path.exists(self.cache_path):
+            print("Loading cached processor data...")
+            cached = joblib.load(self.cache_path)
+            self.__dict__.update(cached.__dict__)
+            return
+        
+        print("Processing files from scratch...")
         self.process_train_tsv(train_tsv)
         self.process_test_tsv(test_tsv)
         self.process_sequences_fasta(sequences_fasta)
@@ -100,3 +110,8 @@ class ProteinDataProcessor:
         print(f"  Training proteins: {len(self.training_set)}")
         print(f"  Validation proteins: {len(self.validation_set)}")
         print(f"  Testing proteins: {len(self.testing_set)}")
+
+        # Save to cache
+        os.makedirs("cache", exist_ok=True)
+        joblib.dump(self, self.cache_path)
+        print("Processor data cached.")

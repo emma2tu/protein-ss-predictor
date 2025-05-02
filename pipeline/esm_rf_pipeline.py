@@ -19,19 +19,33 @@ class ESMRandomForestPipeline:
         self.classifier = RandomForestClassifier(n_estimators=100, random_state=42)
         self.classifier_path = classifier_path
 
-    def embed_sequence(self, sequence):
+        self.embedding_cache_dir = "cache/embeddings/"
+        os.makedirs(self.embedding_cache_dir, exist_ok=True)
+
+    def embed_sequence(self, sequence, protein_name=None):
         """Return per-residue embeddings (logits) for a given amino acid sequence."""
+        if protein_name:
+            cache_file = os.path.join(self.embedding_cache_dir, f"{protein_name}.npy")
+            if os.path.exists(cache_file):
+                return np.load(cache_file)
+        
         inputs = self.tokenizer(sequence, return_tensors="pt", add_special_tokens=True).to(self.device)
         with torch.no_grad():
             outputs = self.model(**inputs)
         # Exclude CLS and EOS tokens
         residue_embeddings = outputs.last_hidden_state[0][1:-1]
-        return residue_embeddings.detach().cpu().numpy()  # Safely move back to CPU
+
+        result = residue_embeddings.detach().cpu().numpy()  # Safely move back to CPU
+
+        if protein_name:
+            np.save(cache_file, result)
+
+        return result
 
     def generate_inputset(self, inputset_dict):
         X = []
         for protein, seq in inputset_dict.items():
-            embeddings = self.embed_sequence(seq)
+            embeddings = self.embed_sequence(seq, protein_name=protein)
         return np.array(X)
 
     def generate_dataset(self, dataset_dict):
