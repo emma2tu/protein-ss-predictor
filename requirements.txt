@@ -3,6 +3,7 @@ asttokens==3.0.0
 biopython==1.85
 certifi==2025.4.26
 charset-normalizer==3.4.1
+colorama==0.4.6
 comm==0.2.2
 debugpy==1.8.14
 decorator==5.2.1
@@ -41,6 +42,7 @@ Pygments==2.19.1
 pytest==8.3.5
 python-dateutil==2.9.0.post0
 pytz==2025.2
+pywin32==310
 PyYAML==6.0.2
 pyzmq==26.4.0
 regex==2024.11.6
@@ -54,7 +56,7 @@ stack-data==0.6.3
 sympy==1.13.3
 threadpoolctl==3.6.0
 tokenizers==0.21.1
-torch==2.7.0
+torch==2.7.0+cu118
 tornado==6.4.2
 tqdm==4.67.1
 traitlets==5.14.3

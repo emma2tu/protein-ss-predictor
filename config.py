@@ -4,6 +4,7 @@ FASTA = "data/sequences.fasta"
 PREDICTION_TSV = "data/prediction.tsv"
 
 ESM_MODEL_NAME = "facebook/esm2_t6_8M_UR50D"
+CLASSIFIER_PATH = "model/rf_model.pkl"
 RANDOM_SEED = 42
 VALIDATION_SPLIT = 0.2
 
